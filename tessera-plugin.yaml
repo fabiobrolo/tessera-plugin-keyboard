@@ -1,0 +1,41 @@
+id: type_text
+version: 0.1.0
+api: "0.8"
+icon: keyboard
+maintainer: fabiobrolo
+license: MIT
+stage: beta
+topics: [home, tech]
+requires:
+  esphome: 2026.6.2
+boards: any
+flash_kb: 16
+
+permissions:
+  home_assistant_actions: ["{target_script}"]
+
+inputs:
+  - id: target_script
+    kind: entity
+    domains: [script]
+    scope: screen
+    label: target_script
+    hint: target_script_hint
+
+tiles:
+  - id: type_text
+    name: tile_name
+    icon: keyboard
+    sizes: { min: 1x1, max: 2x2 }
+    memory: 600
+    example: tile_example
+
+cards:
+  - id: keyboard
+    name: card_name
+
+tap_actions:
+  - id: open_keyboard
+    label: tap_open_keyboard
+    domains: [script, media_player, input_text]
+    card: keyboard

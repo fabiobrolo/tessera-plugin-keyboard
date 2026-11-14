@@ -1,0 +1,13 @@
+defaults:
+  TARGET_SCRIPT: ""
+
+font:
+  - id: !extend materialdesign_icons
+    glyphs:
+      - "\U000F0312" # keyboard-outline
+  - id: !extend materialdesign_icons_mini
+    glyphs:
+      - "\U000F0312" # keyboard-outline
+
+type_text:
+  script: ${TARGET_SCRIPT}

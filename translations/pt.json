@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "name": "Português"
+  },
+  "screen": {
+    "title": "Digitar Texto",
+    "placeholder": "Digite aqui...",
+    "send": "Enviar",
+    "clear": "Limpar"
+  },
+  "app": {
+    "name": "Type Text",
+    "summary": "Digite texto na tela com um teclado virtual e envie para o Home Assistant.",
+    "target_script": "Script de destino",
+    "target_script_hint": "Script do Home Assistant que recebe o texto digitado no parâmetro 'input_text'.",
+    "tile_name": "Digitar Texto",
+    "tile_example": "Abre o teclado virtual para digitar e enviar texto",
+    "card_name": "Teclado Virtual",
+    "tap_open_keyboard": "Abrir Teclado"
+  }
+}
