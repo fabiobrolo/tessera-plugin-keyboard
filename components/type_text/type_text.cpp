@@ -127,8 +127,12 @@ void TypeText::open_keyboard() {
 void TypeText::submit_text(const std::string &text) {
   if (!script_.empty()) {
     JsonDocument d;
-    d["input_text"] = text;
-    tessera::action(script_.c_str(), "", d);
+    JsonObject obj = d.to<JsonObject>();
+    obj["input_text"] = text;
+    ESP_LOGI("type_text", "Submitting input_text='%s' to script='%s'", text.c_str(), script_.c_str());
+    tessera::action(script_.c_str(), "", obj);
+  } else {
+    ESP_LOGW("type_text", "No target_script configured; cannot submit '%s'", text.c_str());
   }
   for (auto *trig : submit_triggers_) {
     trig->trigger(text);
@@ -188,14 +192,14 @@ void KeyboardCard::open(const tessera::CardContext &c) {
 
   int pad = ui::px(4);
   int avail_w = std::max(1, w - 2 * pad);
-  int gap = ui::px(12);
-  int top_y = ui::px(4);
+  int gap = ui::px(10);
+  int top_y = 0;
 
   int ta_w, ta_h, clear_x, clear_y, clear_w, btn_h, send_x, send_y, send_w, kb_y, kb_h;
 
   if (landscape) {
     // Horizontal orientation: place textarea + Limpar + Enviar on a single top bar so the keyboard gets maximum height & full width
-    ta_h = ui::px(56);
+    ta_h = ui::px(54);
     btn_h = ta_h;
     clear_w = std::max(ui::px(130), avail_w / 8);
     send_w = std::max(ui::px(150), avail_w / 6);
@@ -207,11 +211,11 @@ void KeyboardCard::open(const tessera::CardContext &c) {
     send_y = top_y;
 
     kb_y = top_y + ta_h + gap;
-    kb_h = std::max(ui::px(200), h - kb_y - ui::px(4));
+    kb_h = std::max(ui::px(200), h - kb_y - ui::px(8));
   } else {
     // Vertical orientation: textarea on row 1, buttons on row 2, keyboard below
     ta_w = avail_w;
-    ta_h = ui::px(58);
+    ta_h = ui::px(56);
     btn_h = ui::px(48);
     clear_w = (avail_w - gap) / 3;
     send_w = avail_w - clear_w - gap;
@@ -222,7 +226,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
     send_y = clear_y;
 
     kb_y = clear_y + btn_h + gap;
-    int avail_kb_h = std::max(ui::px(220), h - kb_y - ui::px(4));
+    int avail_kb_h = std::max(ui::px(220), h - kb_y - ui::px(8));
     kb_h = std::min(avail_kb_h, std::max(ui::px(380), avail_w * 3 / 4));
   }
 
@@ -233,7 +237,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_textarea_set_placeholder_text(ta_, ph.c_str());
   lv_textarea_set_one_line(ta_, true);
   lv_obj_set_size(ta_, ta_w, ta_h);
-  lv_obj_set_pos(ta_, pad, top_y);
+  lv_obj_align(ta_, LV_ALIGN_TOP_LEFT, pad, top_y);
   lv_obj_set_style_text_font(ta_, ui::font(Font::TITLE), 0);
   lv_obj_set_style_border_width(ta_, ui::px(2), 0);
   lv_obj_set_style_border_color(ta_, theme::color(theme::TRACK), 0);
@@ -246,7 +250,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_add_flag(btn_clear_, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(btn_clear_, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_size(btn_clear_, clear_w, btn_h);
-  lv_obj_set_pos(btn_clear_, clear_x, clear_y);
+  lv_obj_align(btn_clear_, LV_ALIGN_TOP_LEFT, clear_x, clear_y);
   lv_obj_set_style_radius(btn_clear_, ui::px(10), 0);
   lv_obj_set_style_bg_color(btn_clear_, theme::color(theme::TRACK), 0);
   lbl_clear_ = ui::label(btn_clear_, Font::BODY_LARGE, theme::INK);
@@ -259,7 +263,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_add_flag(btn_send_, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(btn_send_, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_size(btn_send_, send_w, btn_h);
-  lv_obj_set_pos(btn_send_, send_x, send_y);
+  lv_obj_align(btn_send_, LV_ALIGN_TOP_LEFT, send_x, send_y);
   lv_obj_set_style_radius(btn_send_, ui::px(10), 0);
   lv_obj_set_style_bg_color(btn_send_, lv_color_hex(theme::ha::GREEN), 0);
   lbl_send_ = ui::label(btn_send_, Font::BODY_LARGE, theme::INK);
@@ -276,8 +280,9 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_keyboard_set_map(kb_, LV_KEYBOARD_MODE_SPECIAL, KB_MAP_SPEC, KB_CTRL_SPEC);
   lv_keyboard_set_mode(kb_, LV_KEYBOARD_MODE_TEXT_LOWER);
 
+  // IMPORTANT: lv_keyboard_create sets LV_ALIGN_BOTTOM_MID by default; reset to LV_ALIGN_TOP_LEFT before positioning!
   lv_obj_set_size(kb_, avail_w, kb_h);
-  lv_obj_set_pos(kb_, pad, kb_y);
+  lv_obj_align(kb_, LV_ALIGN_TOP_LEFT, pad, kb_y);
   lv_obj_set_style_radius(kb_, ui::px(12), 0);
   lv_obj_set_style_bg_color(kb_, theme::color(theme::CARD), 0);
   lv_obj_set_style_border_width(kb_, 0, 0);

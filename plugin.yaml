@@ -1,5 +1,5 @@
 defaults:
-  TARGET_SCRIPT: ""
+  TARGET_SCRIPT: "script.buscar_youtube_salao_festas"
 
 font:
   - id: !extend materialdesign_icons
