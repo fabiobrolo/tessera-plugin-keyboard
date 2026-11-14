@@ -17,11 +17,15 @@ constexpr const char *MDI_LEFT      = "\xF3\xB0\x85\x81";  // \U000F0141 chevron
 constexpr const char *MDI_RIGHT     = "\xF3\xB0\x85\x82";  // \U000F0142 chevron-right
 constexpr const char *MDI_CHECK     = "\xF3\xB0\x84\xAC";  // \U000F012C check
 
-constexpr lv_buttonmatrix_ctrl_t KB_CTRL_MODE =
+constexpr lv_buttonmatrix_ctrl_t ctrl(int v) {
+  return static_cast<lv_buttonmatrix_ctrl_t>(v);
+}
+
+constexpr int KB_CTRL_MODE =
     LV_BUTTONMATRIX_CTRL_CHECKED | LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG;
-constexpr lv_buttonmatrix_ctrl_t KB_CTRL_REPEAT =
+constexpr int KB_CTRL_REPEAT =
     LV_BUTTONMATRIX_CTRL_CHECKED;
-constexpr lv_buttonmatrix_ctrl_t KB_KEY =
+constexpr int KB_KEY =
     LV_BUTTONMATRIX_CTRL_POPOVER;
 
 // Lowercase map (12 + 12 + 12 + 5 = 41 buttons)
@@ -41,10 +45,10 @@ const char *const KB_MAP_UC[] = {
 };
 
 const lv_buttonmatrix_ctrl_t KB_CTRL_ALPHA[] = {
-    KB_CTRL_MODE | 5, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_CTRL_REPEAT | 7,
-    KB_CTRL_MODE | 5, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_KEY | 4, KB_CTRL_MODE | 7,
-    KB_CTRL_REPEAT | 1, KB_CTRL_REPEAT | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_CTRL_REPEAT | 1, KB_CTRL_REPEAT | 1, KB_CTRL_REPEAT | 1,
-    KB_CTRL_MODE | 2, KB_CTRL_REPEAT | 2, 6, KB_CTRL_REPEAT | 2, KB_CTRL_MODE | 2
+    ctrl(KB_CTRL_MODE | 5), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_CTRL_REPEAT | 7),
+    ctrl(KB_CTRL_MODE | 5), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_CTRL_MODE | 7),
+    ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_CTRL_REPEAT | 1),
+    ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
 
 // Special / numbers map (11 + 12 + 12 + 5 = 40 buttons)
@@ -56,10 +60,10 @@ const char *const KB_MAP_SPEC[] = {
 };
 
 const lv_buttonmatrix_ctrl_t KB_CTRL_SPEC[] = {
-    KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_CTRL_REPEAT | 2,
-    KB_CTRL_MODE | 2, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1,
-    KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1, KB_KEY | 1,
-    KB_CTRL_MODE | 2, KB_CTRL_REPEAT | 2, 6, KB_CTRL_REPEAT | 2, KB_CTRL_MODE | 2
+    ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_CTRL_REPEAT | 2),
+    ctrl(KB_CTRL_MODE | 2), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1),
+    ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1),
+    ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
 
 // Composite LVGL font: Font::TITLE for text + Font::ICON_SMALL fallback for MDI icons
