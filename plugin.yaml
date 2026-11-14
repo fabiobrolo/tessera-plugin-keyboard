@@ -1,6 +1,18 @@
 defaults:
   TARGET_SCRIPT: ""
 
+font:
+  - id: !extend materialdesign_icons
+    glyphs:
+      - "\U000F0311" # keyboard-return
+      - "\U000F0312" # keyboard-outline
+      - "\U000F0B5C" # backspace-outline
+  - id: !extend materialdesign_icons_mini
+    glyphs:
+      - "\U000F0311" # keyboard-return
+      - "\U000F0312" # keyboard-outline
+      - "\U000F0B5C" # backspace-outline
+
 lvgl:
   top_layer:
     widgets:
