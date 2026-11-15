@@ -9,7 +9,7 @@ Keyboard *global_keyboard = nullptr;
 
 namespace {
 
-// UTF-8 sequences for Material Design Icons (included in materialdesign_icons_mini via core.yaml and plugin.yaml).
+// UTF-8 sequences for Material Design Icons (included in materialdesign_icons and materialdesign_icons_mini).
 constexpr const char *MDI_BACKSPACE = "\xF3\xB0\xAD\x9C";  // \U000F0B5C backspace-outline
 constexpr const char *MDI_RETURN    = "\xF3\xB0\x8C\x91";  // \U000F0311 keyboard-return
 constexpr const char *MDI_KEYBOARD  = "\xF3\xB0\x8C\x92";  // \U000F0312 keyboard-outline
@@ -69,38 +69,66 @@ const lv_buttonmatrix_ctrl_t KB_CTRL_SPEC[] = {
     ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
 
-// Composite LVGL font combining Font::TITLE for alphanumeric glyphs with Font::ICON_SMALL fallback for MDI icons.
-lv_font_t kb_font_;
-lv_font_t kb_icon_font_;
-bool kb_font_ready_ = false;
+// Composite LVGL fonts:
+// - Small/medium screens: Font::TITLE (18px base) + Font::ICON_SMALL (26px base) fallback.
+// - Large screens (>= 700px): Font::VALUE (38px base, ~2x larger) + Font::ICON (42px base, ~2x larger) fallback.
+lv_font_t kb_font_small_;
+lv_font_t kb_icon_font_small_;
+bool kb_font_small_ready_ = false;
 
-// Custom glyph descriptor callback that vertically centers MDI icon glyphs within the Font::TITLE line height.
-bool kb_icon_get_glyph_dsc(const lv_font_t *font, lv_font_glyph_dsc_t *dsc, uint32_t letter, uint32_t letter_next) {
-  const lv_font_t *icon = ui::font(Font::ICON_SMALL);
-  if (!icon || !icon->get_glyph_dsc(icon, dsc, letter, letter_next)) return false;
-  const lv_font_t *title = ui::font(Font::TITLE);
-  int32_t lh = title ? title->line_height : font->line_height;
-  int32_t bl = title ? title->base_line : font->base_line;
+lv_font_t kb_font_large_;
+lv_font_t kb_icon_font_large_;
+bool kb_font_large_ready_ = false;
+
+bool center_icon_glyph(const lv_font_t *icon_font, const lv_font_t *text_font, const lv_font_t *fallback_font,
+                       lv_font_glyph_dsc_t *dsc, uint32_t letter, uint32_t letter_next) {
+  if (!icon_font || !icon_font->get_glyph_dsc(icon_font, dsc, letter, letter_next)) return false;
+  int32_t lh = text_font ? text_font->line_height : fallback_font->line_height;
+  int32_t bl = text_font ? text_font->base_line : fallback_font->base_line;
   int32_t base_from_top = lh - bl;
   int32_t target_top = (lh - static_cast<int32_t>(dsc->box_h)) / 2;
   dsc->ofs_y = base_from_top - static_cast<int32_t>(dsc->box_h) - target_top;
   return true;
 }
 
-// Lazily initializes and returns the composite font used by the virtual keyboard.
-const lv_font_t *get_kb_font() {
+bool kb_icon_get_glyph_dsc_small(const lv_font_t *font, lv_font_glyph_dsc_t *dsc, uint32_t letter, uint32_t letter_next) {
+  return center_icon_glyph(ui::font(Font::ICON_SMALL), ui::font(Font::TITLE), font, dsc, letter, letter_next);
+}
+
+bool kb_icon_get_glyph_dsc_large(const lv_font_t *font, lv_font_glyph_dsc_t *dsc, uint32_t letter, uint32_t letter_next) {
+  return center_icon_glyph(ui::font(Font::ICON), ui::font(Font::VALUE), font, dsc, letter, letter_next);
+}
+
+// Returns the composite keyboard font scaled for the current screen size.
+const lv_font_t *get_kb_font(bool large_screen) {
+  if (large_screen) {
+    const lv_font_t *val = ui::font(Font::VALUE);
+    const lv_font_t *icon = ui::font(Font::ICON);
+    if (val) {
+      if (!kb_font_large_ready_ && icon) {
+        kb_icon_font_large_ = *icon;
+        kb_icon_font_large_.get_glyph_dsc = kb_icon_get_glyph_dsc_large;
+        kb_icon_font_large_.fallback = nullptr;
+        kb_font_large_ = *val;
+        kb_font_large_.fallback = &kb_icon_font_large_;
+        kb_font_large_ready_ = true;
+      }
+      return kb_font_large_ready_ ? &kb_font_large_ : val;
+    }
+  }
+
   const lv_font_t *title = ui::font(Font::TITLE);
   const lv_font_t *icon = ui::font(Font::ICON_SMALL);
   if (!title) return nullptr;
-  if (!kb_font_ready_ && icon) {
-    kb_icon_font_ = *icon;
-    kb_icon_font_.get_glyph_dsc = kb_icon_get_glyph_dsc;
-    kb_icon_font_.fallback = nullptr;
-    kb_font_ = *title;
-    kb_font_.fallback = &kb_icon_font_;
-    kb_font_ready_ = true;
+  if (!kb_font_small_ready_ && icon) {
+    kb_icon_font_small_ = *icon;
+    kb_icon_font_small_.get_glyph_dsc = kb_icon_get_glyph_dsc_small;
+    kb_icon_font_small_.fallback = nullptr;
+    kb_font_small_ = *title;
+    kb_font_small_.fallback = &kb_icon_font_small_;
+    kb_font_small_ready_ = true;
   }
-  return kb_font_ready_ ? &kb_font_ : title;
+  return kb_font_small_ready_ ? &kb_font_small_ : title;
 }
 
 }  // namespace
@@ -194,6 +222,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   int w = c.width;
   int h = c.height;
   bool landscape = w > h;
+  bool large_screen = std::max(w, h) >= 700;
 
   int pad = ui::px(4);
   int avail_w = std::max(1, w - 2 * pad);
@@ -204,10 +233,10 @@ void KeyboardCard::open(const tessera::CardContext &c) {
 
   if (landscape) {
     // Landscape orientation: place textarea, Clear, and Send on a single top row to maximize keyboard height and width.
-    ta_h = ui::px(54);
+    ta_h = large_screen ? ui::px(64) : ui::px(54);
     btn_h = ta_h;
-    clear_w = std::max(ui::px(130), avail_w / 8);
-    send_w = std::max(ui::px(150), avail_w / 6);
+    clear_w = std::max(ui::px(140), avail_w / 8);
+    send_w = std::max(ui::px(160), avail_w / 6);
     ta_w = std::max(ui::px(200), avail_w - clear_w - send_w - 2 * gap);
 
     clear_x = pad + ta_w + gap;
@@ -220,8 +249,8 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   } else {
     // Portrait orientation: stack textarea on row 1, action buttons on row 2, and virtual keyboard below.
     ta_w = avail_w;
-    ta_h = ui::px(56);
-    btn_h = ui::px(48);
+    ta_h = large_screen ? ui::px(64) : ui::px(56);
+    btn_h = large_screen ? ui::px(56) : ui::px(48);
     clear_w = (avail_w - gap) / 3;
     send_w = avail_w - clear_w - gap;
 
@@ -235,6 +264,9 @@ void KeyboardCard::open(const tessera::CardContext &c) {
     kb_h = std::min(avail_kb_h, std::max(ui::px(380), avail_w * 3 / 4));
   }
 
+  Font ta_font = large_screen ? Font::HEADLINE : Font::TITLE;
+  Font btn_font = large_screen ? Font::HEADLINE : Font::BODY_LARGE;
+
   // 1. Single-line text input field (textarea).
   ta_ = lv_textarea_create(c.parent);
   std::string ph = plugin_->text("placeholder");
@@ -243,7 +275,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_textarea_set_one_line(ta_, true);
   lv_obj_set_size(ta_, ta_w, ta_h);
   lv_obj_align(ta_, LV_ALIGN_TOP_LEFT, pad, top_y);
-  lv_obj_set_style_text_font(ta_, ui::font(Font::TITLE), 0);
+  lv_obj_set_style_text_font(ta_, ui::font(ta_font), 0);
   lv_obj_set_style_border_width(ta_, ui::px(2), 0);
   lv_obj_set_style_border_color(ta_, theme::color(theme::TRACK), 0);
   lv_obj_set_style_radius(ta_, ui::px(10), 0);
@@ -258,7 +290,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_align(btn_clear_, LV_ALIGN_TOP_LEFT, clear_x, clear_y);
   lv_obj_set_style_radius(btn_clear_, ui::px(10), 0);
   lv_obj_set_style_bg_color(btn_clear_, theme::color(theme::TRACK), 0);
-  lbl_clear_ = ui::label(btn_clear_, Font::BODY_LARGE, theme::INK);
+  lbl_clear_ = ui::label(btn_clear_, btn_font, theme::INK);
   std::string clr_txt = plugin_->text("clear");
   ui::set_text(lbl_clear_, clr_txt.empty() ? "Clear" : clr_txt);
   lv_obj_center(lbl_clear_);
@@ -271,7 +303,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_align(btn_send_, LV_ALIGN_TOP_LEFT, send_x, send_y);
   lv_obj_set_style_radius(btn_send_, ui::px(10), 0);
   lv_obj_set_style_bg_color(btn_send_, lv_color_hex(theme::ha::GREEN), 0);
-  lbl_send_ = ui::label(btn_send_, Font::BODY_LARGE, theme::INK);
+  lbl_send_ = ui::label(btn_send_, btn_font, theme::INK);
   lv_obj_set_style_text_color(lbl_send_, lv_color_white(), 0);
   std::string send_txt = plugin_->text("send");
   ui::set_text(lbl_send_, send_txt.empty() ? "Send" : send_txt);
@@ -295,7 +327,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_set_style_pad_row(kb_, ui::px(8), 0);
   lv_obj_set_style_pad_column(kb_, ui::px(8), 0);
 
-  const lv_font_t *kb_font = get_kb_font();
+  const lv_font_t *kb_font = get_kb_font(large_screen);
   if (kb_font) {
     lv_obj_set_style_text_font(kb_, kb_font, 0);
     lv_obj_set_style_text_font(kb_, kb_font, LV_PART_ITEMS);
