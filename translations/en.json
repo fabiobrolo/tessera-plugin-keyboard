@@ -3,19 +3,19 @@
     "name": "English"
   },
   "screen": {
-    "title": "Type Text",
+    "title": "Keyboard",
     "placeholder": "Type here...",
     "send": "Send",
     "clear": "Clear"
   },
   "app": {
-    "name": "Type Text",
-    "summary": "Type text on the screen using an on-screen keyboard and send it to Home Assistant.",
+    "name": "Keyboard",
+    "summary": "Open a virtual on-screen keyboard to type text and send it to a Home Assistant script.",
     "target_script": "Target script",
-    "target_script_hint": "Home Assistant script that receives the typed text in parameter 'input_text'.",
-    "tile_name": "Type Text",
-    "tile_example": "Open on-screen keyboard to type and submit text",
-    "card_name": "On-Screen Keyboard",
+    "target_script_hint": "Home Assistant script that receives the typed text in the 'input_text' field.",
+    "tile_name": "Keyboard",
+    "tile_example": "Open the on-screen keyboard to type and submit text",
+    "card_name": "Virtual Keyboard",
     "tap_open_keyboard": "Open Keyboard"
   }
 }

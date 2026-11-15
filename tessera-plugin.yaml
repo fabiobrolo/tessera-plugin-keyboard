@@ -1,4 +1,5 @@
-id: type_text
+# Tessera Plugin Manifest for Keyboard
+id: keyboard
 version: 0.1.0
 api: "0.8"
 icon: keyboard
@@ -11,9 +12,11 @@ requires:
 boards: any
 flash_kb: 16
 
+# Grants permission to call the user-configured Home Assistant script
 permissions:
   home_assistant_actions: ["{target_script}"]
 
+# Screen-scoped configuration input requiring a Home Assistant script entity
 inputs:
   - id: target_script
     kind: entity
@@ -22,18 +25,22 @@ inputs:
     label: target_script
     hint: target_script_hint
 
+# Dashboard tile definition (supports 1x1 up to 2x2 grid spans)
 tiles:
-  - id: type_text
+  - id: keyboard
     name: tile_name
     icon: keyboard
     sizes: { min: 1x1, max: 2x2 }
     memory: 600
     example: tile_example
 
+# Full-width modal card hosting the on-screen virtual keyboard
 cards:
   - id: keyboard
     name: card_name
+    wide: true
 
+# Tap action allowing other tiles to open the virtual keyboard card
 tap_actions:
   - id: open_keyboard
     label: tap_open_keyboard

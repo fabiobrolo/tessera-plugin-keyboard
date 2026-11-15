@@ -1,6 +1,8 @@
+# Default substitution for the target Home Assistant script entity
 defaults:
   TARGET_SCRIPT: "script.buscar_youtube_salao_festas"
 
+# Extend Material Design Icons fonts with glyphs required by the keyboard keys
 font:
   - id: !extend materialdesign_icons
     glyphs:
@@ -13,12 +15,14 @@ font:
       - "\U000F0312" # keyboard-outline
       - "\U000F0B5C" # backspace-outline
 
+# Hidden LVGL keyboard widget on top_layer so ESPHome enables LV_USE_KEYBOARD and LV_USE_TEXTAREA
 lvgl:
   top_layer:
     widgets:
       - keyboard:
-          id: type_text_seed
+          id: keyboard_seed
           hidden: true
 
-type_text:
+# Instantiate the keyboard plugin component and bind the configured target script
+keyboard:
   script: ${TARGET_SCRIPT}

@@ -1,15 +1,15 @@
-#include "type_text.h"
+#include "keyboard.h"
 #include <algorithm>
 #include <cctype>
 #include <cstring>
 
-namespace esphome::type_text {
+namespace esphome::keyboard {
 
-TypeText *global_type_text = nullptr;
+Keyboard *global_keyboard = nullptr;
 
 namespace {
 
-// Material Design Icons (present in materialdesign_icons_mini via core.yaml + plugin.yaml)
+// UTF-8 sequences for Material Design Icons (included in materialdesign_icons_mini via core.yaml and plugin.yaml).
 constexpr const char *MDI_BACKSPACE = "\xF3\xB0\xAD\x9C";  // \U000F0B5C backspace-outline
 constexpr const char *MDI_RETURN    = "\xF3\xB0\x8C\x91";  // \U000F0311 keyboard-return
 constexpr const char *MDI_KEYBOARD  = "\xF3\xB0\x8C\x92";  // \U000F0312 keyboard-outline
@@ -17,6 +17,7 @@ constexpr const char *MDI_LEFT      = "\xF3\xB0\x85\x81";  // \U000F0141 chevron
 constexpr const char *MDI_RIGHT     = "\xF3\xB0\x85\x82";  // \U000F0142 chevron-right
 constexpr const char *MDI_CHECK     = "\xF3\xB0\x84\xAC";  // \U000F012C check
 
+// Helper to cast bitwise-combined buttonmatrix control flags back to lv_buttonmatrix_ctrl_t.
 constexpr lv_buttonmatrix_ctrl_t ctrl(int v) {
   return static_cast<lv_buttonmatrix_ctrl_t>(v);
 }
@@ -28,7 +29,7 @@ constexpr int KB_CTRL_REPEAT =
 constexpr int KB_KEY =
     LV_BUTTONMATRIX_CTRL_POPOVER;
 
-// Lowercase map (12 + 12 + 12 + 5 = 41 buttons)
+// Lowercase QWERTY button map (12 + 12 + 12 + 5 = 41 buttons).
 const char *const KB_MAP_LC[] = {
     "1#", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", MDI_BACKSPACE, "\n",
     "ABC", "a", "s", "d", "f", "g", "h", "j", "k", "l", "ç", MDI_RETURN, "\n",
@@ -36,7 +37,7 @@ const char *const KB_MAP_LC[] = {
     MDI_KEYBOARD, MDI_LEFT, " ", MDI_RIGHT, MDI_CHECK, ""
 };
 
-// Uppercase map (12 + 12 + 12 + 5 = 41 buttons)
+// Uppercase QWERTY button map (12 + 12 + 12 + 5 = 41 buttons).
 const char *const KB_MAP_UC[] = {
     "1#", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", MDI_BACKSPACE, "\n",
     "abc", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Ç", MDI_RETURN, "\n",
@@ -44,6 +45,7 @@ const char *const KB_MAP_UC[] = {
     MDI_KEYBOARD, MDI_LEFT, " ", MDI_RIGHT, MDI_CHECK, ""
 };
 
+// Control flags for the lowercase and uppercase maps.
 const lv_buttonmatrix_ctrl_t KB_CTRL_ALPHA[] = {
     ctrl(KB_CTRL_MODE | 5), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_CTRL_REPEAT | 7),
     ctrl(KB_CTRL_MODE | 5), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_CTRL_MODE | 7),
@@ -51,7 +53,7 @@ const lv_buttonmatrix_ctrl_t KB_CTRL_ALPHA[] = {
     ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
 
-// Special / numbers map (11 + 12 + 12 + 5 = 40 buttons)
+// Numbers and special symbols button map (11 + 12 + 12 + 5 = 40 buttons).
 const char *const KB_MAP_SPEC[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", MDI_BACKSPACE, "\n",
     "abc", "+", "&", "/", "*", "=", "%", "!", "?", "#", ":", ";", "\n",
@@ -59,6 +61,7 @@ const char *const KB_MAP_SPEC[] = {
     MDI_KEYBOARD, MDI_LEFT, " ", MDI_RIGHT, MDI_CHECK, ""
 };
 
+// Control flags for the numbers and special symbols map.
 const lv_buttonmatrix_ctrl_t KB_CTRL_SPEC[] = {
     ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_CTRL_REPEAT | 2),
     ctrl(KB_CTRL_MODE | 2), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1),
@@ -66,11 +69,12 @@ const lv_buttonmatrix_ctrl_t KB_CTRL_SPEC[] = {
     ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
 
-// Composite LVGL font: Font::TITLE for text + Font::ICON_SMALL fallback for MDI icons
+// Composite LVGL font combining Font::TITLE for alphanumeric glyphs with Font::ICON_SMALL fallback for MDI icons.
 lv_font_t kb_font_;
 lv_font_t kb_icon_font_;
 bool kb_font_ready_ = false;
 
+// Custom glyph descriptor callback that vertically centers MDI icon glyphs within the Font::TITLE line height.
 bool kb_icon_get_glyph_dsc(const lv_font_t *font, lv_font_glyph_dsc_t *dsc, uint32_t letter, uint32_t letter_next) {
   const lv_font_t *icon = ui::font(Font::ICON_SMALL);
   if (!icon || !icon->get_glyph_dsc(icon, dsc, letter, letter_next)) return false;
@@ -83,6 +87,7 @@ bool kb_icon_get_glyph_dsc(const lv_font_t *font, lv_font_glyph_dsc_t *dsc, uint
   return true;
 }
 
+// Lazily initializes and returns the composite font used by the virtual keyboard.
 const lv_font_t *get_kb_font() {
   const lv_font_t *title = ui::font(Font::TITLE);
   const lv_font_t *icon = ui::font(Font::ICON_SMALL);
@@ -101,61 +106,61 @@ const lv_font_t *get_kb_font() {
 }  // namespace
 
 void open_keyboard() {
-  if (global_type_text) {
-    global_type_text->open_keyboard();
+  if (global_keyboard) {
+    global_keyboard->open_keyboard();
   }
 }
 
-// ---------------- TypeText ----------------
+// ---------------- Keyboard ----------------
 
-void TypeText::setup() {
-  global_type_text = this;
-  add_tile("type_text", [this]() { return new TypeTextTile(this); });
-  // wide = true so the keyboard card fills the full width of the glass in horizontal/landscape orientation
+void Keyboard::setup() {
+  global_keyboard = this;
+  add_tile("keyboard", [this]() { return new KeyboardTile(this); });
+  // Set wide = true so the keyboard card spans the full glass width in landscape orientation.
   add_card("keyboard", [this]() { return new KeyboardCard(this); }, true);
   add_tap_action("open_keyboard", [this](const tessera::TapContext &) {
     this->open_keyboard();
   });
 }
 
-void TypeText::open_keyboard() {
+void Keyboard::open_keyboard() {
   std::string title = text("title");
-  if (title.empty()) title = "Digitar Texto";
+  if (title.empty()) title = "Keyboard";
   tessera::open_card(plugin_id(), "keyboard", "", -1, title);
 }
 
-void TypeText::submit_text(const std::string &text) {
+void Keyboard::submit_text(const std::string &text) {
   if (!script_.empty()) {
     JsonDocument d;
     JsonObject obj = d.to<JsonObject>();
     obj["input_text"] = text;
-    ESP_LOGI("type_text", "Submitting input_text='%s' to script='%s'", text.c_str(), script_.c_str());
+    ESP_LOGI("keyboard", "Submitting input_text='%s' to script='%s'", text.c_str(), script_.c_str());
     tessera::action(script_.c_str(), "", obj);
   } else {
-    ESP_LOGW("type_text", "No target_script configured; cannot submit '%s'", text.c_str());
+    ESP_LOGW("keyboard", "No target_script configured; cannot submit '%s'", text.c_str());
   }
   for (auto *trig : submit_triggers_) {
     trig->trigger(text);
   }
 }
 
-// ---------------- TypeTextTile ----------------
+// ---------------- KeyboardTile ----------------
 
-void TypeTextTile::create(const tessera::TileContext &c) {
+void KeyboardTile::create(const tessera::TileContext &c) {
   width_ = c.width;
   height_ = c.height;
   tile_ = c.tile;
 
-  // Icon: keyboard-outline (\U000F0312)
+  // Render centered keyboard-outline icon (\U000F0312).
   icon_label_ = ui::label(c.parent, Font::ICON, theme::INK);
   ui::set_text(icon_label_, "\U000F0312");
   lv_obj_set_width(icon_label_, width_);
   lv_obj_set_style_text_align(icon_label_, LV_TEXT_ALIGN_CENTER, 0);
 
-  // Text label: "Digitar Texto"
+  // Render tile label below the icon.
   text_label_ = ui::label(c.parent, Font::BODY, theme::MUTED);
   std::string name = c.name && c.name[0] ? c.name : plugin_->text("tile_name");
-  if (name.empty()) name = "Digitar Texto";
+  if (name.empty()) name = "Keyboard";
   ui::set_text(text_label_, name);
   lv_obj_set_width(text_label_, width_);
   lv_obj_set_style_text_align(text_label_, LV_TEXT_ALIGN_CENTER, 0);
@@ -172,14 +177,14 @@ void TypeTextTile::create(const tessera::TileContext &c) {
   lv_obj_set_height(text_label_, th);
 }
 
-void TypeTextTile::on_theme() {
+void KeyboardTile::on_theme() {
   ui::set_color(icon_label_, theme::INK);
   ui::set_color(text_label_, theme::MUTED);
 }
 
-void TypeTextTile::on_tap() {
+void KeyboardTile::on_tap() {
   std::string title = plugin_->text("title");
-  if (title.empty()) title = "Digitar Texto";
+  if (title.empty()) title = "Keyboard";
   tessera::open_card(plugin_->plugin_id(), "keyboard", "", tile_, title);
 }
 
@@ -198,7 +203,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   int ta_w, ta_h, clear_x, clear_y, clear_w, btn_h, send_x, send_y, send_w, kb_y, kb_h;
 
   if (landscape) {
-    // Horizontal orientation: place textarea + Limpar + Enviar on a single top bar so the keyboard gets maximum height & full width
+    // Landscape orientation: place textarea, Clear, and Send on a single top row to maximize keyboard height and width.
     ta_h = ui::px(54);
     btn_h = ta_h;
     clear_w = std::max(ui::px(130), avail_w / 8);
@@ -213,7 +218,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
     kb_y = top_y + ta_h + gap;
     kb_h = std::max(ui::px(200), h - kb_y - ui::px(8));
   } else {
-    // Vertical orientation: textarea on row 1, buttons on row 2, keyboard below
+    // Portrait orientation: stack textarea on row 1, action buttons on row 2, and virtual keyboard below.
     ta_w = avail_w;
     ta_h = ui::px(56);
     btn_h = ui::px(48);
@@ -230,10 +235,10 @@ void KeyboardCard::open(const tessera::CardContext &c) {
     kb_h = std::min(avail_kb_h, std::max(ui::px(380), avail_w * 3 / 4));
   }
 
-  // 1. Textarea
+  // 1. Single-line text input field (textarea).
   ta_ = lv_textarea_create(c.parent);
   std::string ph = plugin_->text("placeholder");
-  if (ph.empty()) ph = "Digite aqui...";
+  if (ph.empty()) ph = "Type here...";
   lv_textarea_set_placeholder_text(ta_, ph.c_str());
   lv_textarea_set_one_line(ta_, true);
   lv_obj_set_size(ta_, ta_w, ta_h);
@@ -245,7 +250,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_set_style_bg_color(ta_, theme::color(theme::CARD), 0);
   lv_obj_set_style_text_color(ta_, theme::color(theme::INK), 0);
 
-  // 2. Clear button
+  // 2. Clear button.
   btn_clear_ = lv_obj_create(c.parent);
   lv_obj_add_flag(btn_clear_, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(btn_clear_, LV_OBJ_FLAG_SCROLLABLE);
@@ -255,10 +260,10 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_obj_set_style_bg_color(btn_clear_, theme::color(theme::TRACK), 0);
   lbl_clear_ = ui::label(btn_clear_, Font::BODY_LARGE, theme::INK);
   std::string clr_txt = plugin_->text("clear");
-  ui::set_text(lbl_clear_, clr_txt.empty() ? "Limpar" : clr_txt);
+  ui::set_text(lbl_clear_, clr_txt.empty() ? "Clear" : clr_txt);
   lv_obj_center(lbl_clear_);
 
-  // 3. Send button
+  // 3. Send button.
   btn_send_ = lv_obj_create(c.parent);
   lv_obj_add_flag(btn_send_, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(btn_send_, LV_OBJ_FLAG_SCROLLABLE);
@@ -269,10 +274,10 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lbl_send_ = ui::label(btn_send_, Font::BODY_LARGE, theme::INK);
   lv_obj_set_style_text_color(lbl_send_, lv_color_white(), 0);
   std::string send_txt = plugin_->text("send");
-  ui::set_text(lbl_send_, send_txt.empty() ? "Enviar" : send_txt);
+  ui::set_text(lbl_send_, send_txt.empty() ? "Send" : send_txt);
   lv_obj_center(lbl_send_);
 
-  // 4. Virtual Keyboard with custom MDI icon maps & fallback font
+  // 4. Virtual keyboard with custom MDI icon button maps and composite fallback font.
   kb_ = lv_keyboard_create(c.parent);
   lv_obj_remove_event_cb(kb_, lv_keyboard_def_event_cb);
   lv_keyboard_set_map(kb_, LV_KEYBOARD_MODE_TEXT_LOWER, KB_MAP_LC, KB_CTRL_ALPHA);
@@ -280,7 +285,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
   lv_keyboard_set_map(kb_, LV_KEYBOARD_MODE_SPECIAL, KB_MAP_SPEC, KB_CTRL_SPEC);
   lv_keyboard_set_mode(kb_, LV_KEYBOARD_MODE_TEXT_LOWER);
 
-  // IMPORTANT: lv_keyboard_create sets LV_ALIGN_BOTTOM_MID by default; reset to LV_ALIGN_TOP_LEFT before positioning!
+  // Override lv_keyboard's default LV_ALIGN_BOTTOM_MID alignment with LV_ALIGN_TOP_LEFT so the bottom row is never clipped.
   lv_obj_set_size(kb_, avail_w, kb_h);
   lv_obj_align(kb_, LV_ALIGN_TOP_LEFT, pad, kb_y);
   lv_obj_set_style_radius(kb_, ui::px(12), 0);
@@ -305,7 +310,7 @@ void KeyboardCard::open(const tessera::CardContext &c) {
 
   lv_keyboard_set_textarea(kb_, ta_);
 
-  // Event callbacks
+  // Event callbacks for Clear, Send, and virtual keyboard button presses.
   lv_obj_add_event_cb(btn_clear_, [](lv_event_t *e) {
     auto *card = static_cast<KeyboardCard *>(lv_event_get_user_data(e));
     if (card) card->clear();
@@ -371,7 +376,7 @@ void KeyboardCard::submit() {
   if (!ta_) return;
   const char *raw = lv_textarea_get_text(ta_);
   std::string query = raw ? raw : "";
-  // Trim spaces
+  // Trim leading and trailing whitespace before submitting.
   while (!query.empty() && isspace(static_cast<unsigned char>(query.front()))) query.erase(query.begin());
   while (!query.empty() && isspace(static_cast<unsigned char>(query.back()))) query.pop_back();
 
@@ -387,4 +392,4 @@ void KeyboardCard::clear() {
   }
 }
 
-}  // namespace esphome::type_text
+}  // namespace esphome::keyboard

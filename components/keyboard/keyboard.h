@@ -5,22 +5,23 @@
 #include "esphome/core/automation.h"
 #include "esphome/components/smart_display/plugin_api.h"
 
-namespace esphome::type_text {
+namespace esphome::keyboard {
 
 using tessera::Font;
 namespace ui = tessera::ui;
 
-class TypeText;
+class Keyboard;
 
-class TypeTextTile : public tessera::Tile {
+// Dashboard tile that opens the virtual keyboard card when tapped.
+class KeyboardTile : public tessera::Tile {
  public:
-  explicit TypeTextTile(TypeText *plugin) : plugin_(plugin) {}
+  explicit KeyboardTile(Keyboard *plugin) : plugin_(plugin) {}
   void create(const tessera::TileContext &c) override;
   void on_theme() override;
   void on_tap() override;
 
  private:
-  TypeText *plugin_{};
+  Keyboard *plugin_{};
   int width_{0};
   int height_{0};
   int tile_{-1};
@@ -28,9 +29,10 @@ class TypeTextTile : public tessera::Tile {
   lv_obj_t *text_label_{};
 };
 
+// Full-width modal card presenting the text input box, action buttons, and LVGL virtual keyboard.
 class KeyboardCard : public tessera::Card {
  public:
-  explicit KeyboardCard(TypeText *plugin) : plugin_(plugin) {}
+  explicit KeyboardCard(Keyboard *plugin) : plugin_(plugin) {}
   void open(const tessera::CardContext &c) override;
   void on_theme() override;
 
@@ -38,7 +40,7 @@ class KeyboardCard : public tessera::Card {
   void clear();
 
  private:
-  TypeText *plugin_{};
+  Keyboard *plugin_{};
   lv_obj_t *ta_{};
   lv_obj_t *kb_{};
   lv_obj_t *btn_send_{};
@@ -47,7 +49,8 @@ class KeyboardCard : public tessera::Card {
   lv_obj_t *lbl_clear_{};
 };
 
-class TypeText : public Component, public tessera::Plugin {
+// Main Tessera plugin component managing tile/card registration and Home Assistant script execution.
+class Keyboard : public Component, public tessera::Plugin {
  public:
   void setup() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
@@ -67,14 +70,15 @@ class TypeText : public Component, public tessera::Plugin {
   std::vector<Trigger<std::string> *> submit_triggers_;
 };
 
-template<typename... Ts> class OpenAction : public Action<Ts...>, public Parented<TypeText> {
+// ESPHome automation action (`keyboard.open`) to open the virtual keyboard programmatically.
+template<typename... Ts> class OpenAction : public Action<Ts...>, public Parented<Keyboard> {
  public:
   void play(Ts... x) override {
     this->parent_->open_keyboard();
   }
 };
 
-extern TypeText *global_type_text;
+extern Keyboard *global_keyboard;
 void open_keyboard();
 
-}  // namespace esphome::type_text
+}  // namespace esphome::keyboard
