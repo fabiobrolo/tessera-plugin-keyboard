@@ -13,9 +13,9 @@ A [Tessera (ESP Screen Manager)](https://github.com/MaxGramser/esp-screen-manage
 - **Responsive Full-Width Virtual Keyboard Card (`wide: true`):**
   - **Landscape (`width > height`):** Places the single-line text input box, **Clear**, and **Send** buttons along a single compact top row so the keyboard matrix utilizes the full screen width and maximum vertical height.
   - **Portrait (`height >= width`):** Stacks the text input box on the first row, **Clear** and **Send** buttons on the second row, and the keyboard matrix below.
-- **Custom LVGL Button Maps & Material Design Icons:**
-  - Includes Lowercase (`abc`), Uppercase (`ABC`), and Numbers/Symbols (`1#`) layouts with `ç` / `Ç` support.
-  - Uses a composite LVGL fallback font combining `Font::TITLE` with `Font::ICON_SMALL` so Material Design Icons (`backspace-outline`, `keyboard-return`, `keyboard-outline`, `chevron-left`, `chevron-right`, `check`) render crisply on every key without requiring FontAwesome symbols.
+- **Custom LVGL EN-US Button Maps & Material Design Icons:**
+  - Standard **EN-US QWERTY** layouts for Lowercase (`abc`), Uppercase (`ABC`), and Numbers/Symbols (`1#`).
+  - Automatically scales key letters (`Font::VALUE`, ~2x larger than `Font::TITLE`) and key icons (`Font::ICON`, ~2x larger than `Font::ICON_SMALL`) on large displays (`>= 700px`), using a composite LVGL fallback font so Material Design Icons (`backspace-outline`, `keyboard-return`, `keyboard-outline`, `chevron-left`, `chevron-right`, `check`) render crisply on every key without requiring FontAwesome symbols.
 - **Home Assistant Script Integration:** Calls your configured Home Assistant `script` entity and passes the typed string in the `input_text` field (`{"input_text": "<typed text>"}`).
 
 ---

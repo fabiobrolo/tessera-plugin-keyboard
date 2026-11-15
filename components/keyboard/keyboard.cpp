@@ -29,26 +29,26 @@ constexpr int KB_CTRL_REPEAT =
 constexpr int KB_KEY =
     LV_BUTTONMATRIX_CTRL_POPOVER;
 
-// Lowercase QWERTY button map (12 + 12 + 12 + 5 = 41 buttons).
+// Standard EN-US lowercase QWERTY button map (12 + 11 + 12 + 5 = 40 buttons).
 const char *const KB_MAP_LC[] = {
     "1#", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", MDI_BACKSPACE, "\n",
-    "ABC", "a", "s", "d", "f", "g", "h", "j", "k", "l", "ç", MDI_RETURN, "\n",
-    "_", "-", "z", "x", "c", "v", "b", "n", "m", ".", ",", "?", "\n",
+    "ABC", "a", "s", "d", "f", "g", "h", "j", "k", "l", MDI_RETURN, "\n",
+    "_", "-", "z", "x", "c", "v", "b", "n", "m", ".", ",", ":", "\n",
     MDI_KEYBOARD, MDI_LEFT, " ", MDI_RIGHT, MDI_CHECK, ""
 };
 
-// Uppercase QWERTY button map (12 + 12 + 12 + 5 = 41 buttons).
+// Standard EN-US uppercase QWERTY button map (12 + 11 + 12 + 5 = 40 buttons).
 const char *const KB_MAP_UC[] = {
     "1#", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", MDI_BACKSPACE, "\n",
-    "abc", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Ç", MDI_RETURN, "\n",
-    "_", "-", "Z", "X", "C", "V", "B", "N", "M", ".", ",", "?", "\n",
+    "abc", "A", "S", "D", "F", "G", "H", "J", "K", "L", MDI_RETURN, "\n",
+    "_", "-", "Z", "X", "C", "V", "B", "N", "M", ".", ",", ":", "\n",
     MDI_KEYBOARD, MDI_LEFT, " ", MDI_RIGHT, MDI_CHECK, ""
 };
 
-// Control flags for the lowercase and uppercase maps.
+// Control flags for the EN-US lowercase and uppercase maps (12 + 11 + 12 + 5 = 40 buttons).
 const lv_buttonmatrix_ctrl_t KB_CTRL_ALPHA[] = {
     ctrl(KB_CTRL_MODE | 5), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_CTRL_REPEAT | 7),
-    ctrl(KB_CTRL_MODE | 5), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_KEY | 4), ctrl(KB_CTRL_MODE | 7),
+    ctrl(KB_CTRL_MODE | 6), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_KEY | 3), ctrl(KB_CTRL_MODE | 7),
     ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_CTRL_REPEAT | 1), ctrl(KB_CTRL_REPEAT | 1),
     ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
@@ -56,8 +56,8 @@ const lv_buttonmatrix_ctrl_t KB_CTRL_ALPHA[] = {
 // Numbers and special symbols button map (11 + 12 + 12 + 5 = 40 buttons).
 const char *const KB_MAP_SPEC[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", MDI_BACKSPACE, "\n",
-    "abc", "+", "&", "/", "*", "=", "%", "!", "?", "#", ":", ";", "\n",
-    "\\", "@", "$", "(", ")", "{", "}", "[", "]", "<", ">", "\"", "\n",
+    "abc", "+", "&", "/", "*", "=", "%", "!", "?", "#", "<", ">", "\n",
+    "\\", "@", "$", "(", ")", "{", "}", "[", "]", ";", "\"", "'", "\n",
     MDI_KEYBOARD, MDI_LEFT, " ", MDI_RIGHT, MDI_CHECK, ""
 };
 
@@ -186,7 +186,8 @@ void KeyboardTile::create(const tessera::TileContext &c) {
   lv_obj_set_style_text_align(icon_label_, LV_TEXT_ALIGN_CENTER, 0);
 
   // Render tile label below the icon.
-  text_label_ = ui::label(c.parent, Font::BODY, theme::MUTED);
+  Font lbl_font = (height_ >= ui::px(140)) ? Font::TITLE : Font::BODY;
+  text_label_ = ui::label(c.parent, lbl_font, theme::MUTED);
   std::string name = c.name && c.name[0] ? c.name : plugin_->text("tile_name");
   if (name.empty()) name = "Keyboard";
   ui::set_text(text_label_, name);
@@ -194,7 +195,7 @@ void KeyboardTile::create(const tessera::TileContext &c) {
   lv_obj_set_style_text_align(text_label_, LV_TEXT_ALIGN_CENTER, 0);
 
   int ih = ui::line_height(Font::ICON);
-  int th = ui::line_height(Font::BODY);
+  int th = ui::line_height(lbl_font);
   int gap = ui::px(4);
   int top = (height_ - ih - th - gap) / 2;
   if (top < 0) top = 0;
