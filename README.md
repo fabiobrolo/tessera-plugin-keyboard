@@ -57,13 +57,19 @@ A [Tessera (ESP Screen Manager)](https://github.com/MaxGramser/esp-screen-manage
 
 The plugin requires a Home Assistant **Script** (`script.*`) that accepts an input field named **`input_text`**.
 
-### Example 1: Send Typed Text to the Currently Open App on Android TV (via ADB)
+### Example: Context-Aware Android TV Script (YouTube Deep-Link + Generic ADB `input text`)
 
-If you have an Android TV integrated via `androidtv` (ADB) and want to type directly into whichever app and search/input field is currently focused on the TV screen (e.g., YouTube search bar, Netflix, Plex, Jellyfin, browser, or system login), use Android's `input text` ADB shell command followed by `input keyevent 66` (`KEYCODE_ENTER`):
+On Android TV, **YouTube** (`com.google.android.youtube.tv` / `com.google.android.youtube.tvmusic`) runs on Google's Cobalt canvas engine and renders its own custom on-screen keyboard grid instead of a native Android `EditText` control—so `adb shell input text` is ignored by YouTube.
+
+By checking the active `app_id` on the Android TV media player, a single Home Assistant script can automatically:
+1. Trigger a **direct YouTube search intent** (`vnd.youtube://...`) whenever YouTube or YouTube Music is the active app on the TV.
+2. Inject keystrokes via **`input text "<text>" && input keyevent 66`** into the currently focused native Android text field for other apps.
 
 ```yaml
 alias: Send Text to Active App on Android TV
-description: Types input_text into the currently focused field on Android TV via ADB and presses Enter
+description: >-
+  Sends input_text to the currently open app on Android TV (uses deep-link search
+  when YouTube/YouTube Music is active, or ADB input text for native input fields)
 fields:
   input_text:
     name: Text to type
@@ -72,52 +78,46 @@ fields:
     selector:
       text:
 sequence:
-  - action: androidtv.adb_command
-    target:
-      entity_id: media_player.androidtv_salao_festas_adb
-    data:
-      command: >-
-        {% set clean = input_text | string
-           | replace('á','a') | replace('à','a') | replace('ã','a') | replace('â','a')
-           | replace('Á','A') | replace('À','A') | replace('Ã','A') | replace('Â','A')
-           | replace('é','e') | replace('ê','e') | replace('É','E') | replace('Ê','E')
-           | replace('í','i') | replace('Í','I')
-           | replace('ó','o') | replace('õ','o') | replace('ô','o') | replace('Ó','O') | replace('Õ','O') | replace('Ô','O')
-           | replace('ú','u') | replace('ü','u') | replace('Ú','U') | replace('Ü','U')
-           | replace('ç','c') | replace('Ç','C')
-           | replace('\\', '\\\\') | replace('"', '\\"') | replace("'", "\\'")
-           | replace(' ', '%s') %}
-        input text "{{ clean }}" && input keyevent 66
+  - variables:
+      app_atual: >-
+        {{ state_attr('media_player.androidtv_salao_festas_adb', 'app_id')
+           or state_attr('media_player.androidtv_salao_festas', 'app_id')
+           or '' }}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ 'youtube' in (app_atual | lower) }}"
+        sequence:
+          - action: androidtv.adb_command
+            target:
+              entity_id: media_player.androidtv_salao_festas_adb
+            data:
+              command: >-
+                am start -a android.intent.action.VIEW -d
+                "vnd.youtube://www.youtube.com/results?search_query={{ input_text | urlencode }}"
+    default:
+      - action: androidtv.adb_command
+        target:
+          entity_id: media_player.androidtv_salao_festas_adb
+        data:
+          command: >-
+            {% set clean = input_text | string
+               | replace('á','a') | replace('à','a') | replace('ã','a') | replace('â','a')
+               | replace('Á','A') | replace('À','A') | replace('Ã','A') | replace('Â','A')
+               | replace('é','e') | replace('ê','e') | replace('É','E') | replace('Ê','E')
+               | replace('í','i') | replace('Í','I')
+               | replace('ó','o') | replace('õ','o') | replace('ô','o') | replace('Ó','O') | replace('Õ','O') | replace('Ô','O')
+               | replace('ú','u') | replace('ü','u') | replace('Ú','U') | replace('Ü','U')
+               | replace('ç','c') | replace('Ç','C')
+               | replace('\\', '\\\\') | replace('"', '\\"') | replace("'", "\\'")
+               | replace(' ', '%s') %}
+            input text "{{ clean }}" && input keyevent 66
 mode: single
 icon: mdi:keyboard
 ```
 
 > [!NOTE]
-> Android's `input text` command requires spaces to be encoded as `%s` and only supports ASCII characters. The Jinja2 template above automatically normalizes common accented characters (`ç` -> `c`, `ã` -> `a`, etc.) and escapes quotes before injecting the text into the focused Android TV input box.
-
-### Example 2: Open YouTube Search Results Directly on Android TV (via ADB Intent)
-
-If you prefer to launch the YouTube app directly on a search results page regardless of which app is currently open:
-
-```yaml
-alias: Search YouTube on Android TV
-fields:
-  input_text:
-    name: Search query
-    required: true
-    selector:
-      text:
-sequence:
-  - action: androidtv.adb_command
-    target:
-      entity_id: media_player.androidtv_salao_festas_adb
-    data:
-      command: >-
-        am start -a android.intent.action.VIEW -d
-        "vnd.youtube://www.youtube.com/results?search_query={{ input_text | urlencode }}"
-mode: single
-icon: mdi:youtube
-```
+> Android's `input text` command requires spaces to be encoded as `%s`, only supports ASCII characters, and requires a native Android `EditText` field to be focused on screen. Apps that draw custom non-native keyboards (such as YouTube TV on Cobalt) require deep-link intents (`am start ...`) as shown in the `choose` branch above.
 
 ---
 
