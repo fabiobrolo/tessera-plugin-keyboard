@@ -23,6 +23,6 @@ lvgl:
           id: keyboard_seed
           hidden: true
 
-# Instantiate the keyboard plugin component and bind the configured target script
-keyboard:
+# Instantiate the touch keyboard plugin component and bind the configured target script
+touch_keyboard:
   script: ${TARGET_SCRIPT}

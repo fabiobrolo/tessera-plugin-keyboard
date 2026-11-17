@@ -1,11 +1,11 @@
-#include "keyboard.h"
+#include "touch_keyboard.h"
 #include <algorithm>
 #include <cctype>
 #include <cstring>
 
-namespace esphome::keyboard {
+namespace esphome::touch_keyboard {
 
-Keyboard *global_keyboard = nullptr;
+TouchKeyboard *global_keyboard = nullptr;
 
 namespace {
 
@@ -64,7 +64,7 @@ const char *const KB_MAP_SPEC[] = {
 // Control flags for the numbers and special symbols map.
 const lv_buttonmatrix_ctrl_t KB_CTRL_SPEC[] = {
     ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_CTRL_REPEAT | 2),
-    ctrl(KB_CTRL_MODE | 2), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1),
+    ctrl(KB_CTRL_MODE | 2), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1),
     ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1), ctrl(KB_KEY | 1),
     ctrl(KB_CTRL_MODE | 2), ctrl(KB_CTRL_REPEAT | 2), ctrl(6), ctrl(KB_CTRL_REPEAT | 2), ctrl(KB_CTRL_MODE | 2)
 };
@@ -139,9 +139,9 @@ void open_keyboard() {
   }
 }
 
-// ---------------- Keyboard ----------------
+// ---------------- TouchKeyboard ----------------
 
-void Keyboard::setup() {
+void TouchKeyboard::setup() {
   global_keyboard = this;
   add_tile("keyboard", [this]() { return new KeyboardTile(this); });
   // Set wide = true so the keyboard card spans the full glass width in landscape orientation.
@@ -151,21 +151,21 @@ void Keyboard::setup() {
   });
 }
 
-void Keyboard::open_keyboard() {
+void TouchKeyboard::open_keyboard() {
   std::string title = text("title");
   if (title.empty()) title = "Keyboard";
   tessera::open_card(plugin_id(), "keyboard", "", -1, title);
 }
 
-void Keyboard::submit_text(const std::string &text) {
+void TouchKeyboard::submit_text(const std::string &text) {
   if (!script_.empty()) {
     JsonDocument d;
     JsonObject obj = d.to<JsonObject>();
     obj["input_text"] = text;
-    ESP_LOGI("keyboard", "Submitting input_text='%s' to script='%s'", text.c_str(), script_.c_str());
+    ESP_LOGI("touch_keyboard", "Submitting input_text='%s' to script='%s'", text.c_str(), script_.c_str());
     tessera::action(script_.c_str(), "", obj);
   } else {
-    ESP_LOGW("keyboard", "No target_script configured; cannot submit '%s'", text.c_str());
+    ESP_LOGW("touch_keyboard", "No target_script configured; cannot submit '%s'", text.c_str());
   }
   for (auto *trig : submit_triggers_) {
     trig->trigger(text);
@@ -425,4 +425,4 @@ void KeyboardCard::clear() {
   }
 }
 
-}  // namespace esphome::keyboard
+}  // namespace esphome::touch_keyboard
