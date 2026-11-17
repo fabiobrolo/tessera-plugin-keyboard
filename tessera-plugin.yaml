@@ -1,8 +1,8 @@
 # Tessera Plugin Manifest for Keyboard
 id: keyboard
-version: 0.1.0
+version: 0.1.1
 api: "0.8"
-icon: keyboard
+icon: monitor
 maintainer: fabiobrolo
 license: MIT
 stage: beta
@@ -29,7 +29,7 @@ inputs:
 tiles:
   - id: keyboard
     name: tile_name
-    icon: keyboard
+    icon: monitor
     sizes: { min: 1x1, max: 2x2 }
     memory: 600
     example: tile_example
@@ -44,5 +44,5 @@ cards:
 tap_actions:
   - id: open_keyboard
     label: tap_open_keyboard
-    domains: [script, media_player, input_text]
+    domains: [screen, script, media_player, input_text]
     card: keyboard
